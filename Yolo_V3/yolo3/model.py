@@ -394,7 +394,8 @@ def yolo_loss(args, anchors, num_classes, ignore_thresh=.5, print_loss=False):
         _, ignore_mask = K.control_flow_ops.while_loop(lambda b,*args: b<m, loop_body, [0, ignore_mask])
         ignore_mask = ignore_mask.stack()
         ignore_mask = K.expand_dims(ignore_mask, -1)
-
+        print(type(raw_true_xy),raw_true_xy.shape)
+        print(type(raw_pred),raw_pred.shape)
         # K.binary_crossentropy is helpful to avoid exp overflow.
         xy_loss = object_mask * box_loss_scale * K.binary_crossentropy(raw_true_xy, raw_pred[...,0:2], from_logits=True)
         wh_loss = object_mask * box_loss_scale * 0.5 * K.square(raw_true_wh-raw_pred[...,2:4])
