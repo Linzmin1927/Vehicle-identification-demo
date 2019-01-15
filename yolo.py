@@ -23,7 +23,7 @@ class YOLO(object):
     _defaults = {
         "model_path": 'model_data/yolo.h5',           #模型路径
         "anchors_path": 'model_data/yolo_anchors.txt',#锚点框模板信息
-        "classes_path": 'model_data/coco_classes.txt',#类别信息
+        "classes_path": 'model_data/voc_classes.txt',#类别信息
         "score" : 0.3,
         "iou" : 0.45,
         "model_image_size" : (416, 416),
@@ -130,6 +130,9 @@ class YOLO(object):
             })
 
         print('Found {} boxes for {}'.format(len(out_boxes), 'img'))
+        if (len(out_boxes)==0):
+            print("nothing!!")
+            return 
 
         font = ImageFont.truetype(font='Yolo_V3/font/FiraMono-Medium.otf',
                     size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
