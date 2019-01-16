@@ -85,41 +85,69 @@ class main_GUI(QWidget):
         #先读一帧看看效果
         self.playCapture = cv2.VideoCapture(video_url)
         if not  self.playCapture.isOpened():
-            raise IOError("Couldn't open webcam or video")
+            print("Couldn't open webcam or video")
+            return
         video_FourCC    = int( self.playCapture.get(cv2.CAP_PROP_FOURCC))
         video_fps       =  self.playCapture.get(cv2.CAP_PROP_FPS)
         video_size      = (int( self.playCapture.get(cv2.CAP_PROP_FRAME_WIDTH)),
                             int( self.playCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
         return_value, frame =  self.playCapture.read()
         image = Image.fromarray(frame)
-        image = self.detector.detect_img(image)
-        # print(type(image),image)
-        temp_image = ImageQt(image)
-        temp_pixmap = QPixmap.fromImage(temp_image)
-        self.pictureLabel.setPixmap(temp_pixmap)
+        image_new = self.detector.detect_img(image,True)
+        print(image_new)
+        if(None==image_new):
+            height, width = frame.shape[:2]
+            print(type(frame),frame.shape[:2])
+            if frame.ndim == 3:
+                rgb = cvtColor(frame, COLOR_BGR2RGB)
+            elif frame.ndim == 2:
+                rgb = cvtColor(frame, COLOR_GRAY2BGR)
+            temp_image = QImage(rgb.flatten(), width, height, QImage.Format_RGB888)
+            temp_pixmap = QPixmap.fromImage(temp_image).scaled(self.pictureLabel.width(), self.pictureLabel.height())
+            self.pictureLabel.setPixmap(temp_pixmap)  
+        else:            
+            temp_image = ImageQt(image_new)
+            temp_pixmap = QPixmap.fromImage(temp_image).scaled(self.pictureLabel.width(), self.pictureLabel.height())
+            self.pictureLabel.setPixmap(temp_pixmap)
+
 
         fps = self.playCapture.get(CAP_PROP_FPS)
-        #self.timer.set_fps(fps)
-        self.timer.set_fps(2)
+        self.fps = fps
+        self.count = 0
+        self.frame_rate = 8  #多少帧识别一次
+        print("fps:"+str(fps))
+        self.timer.set_fps(fps)
+        # self.timer.set_fps(3)
         # self.playCapture.release() #
         self.timer.start()
 
             # self.videoWriter = VideoWriter('*.mp4', VideoWriter_fourcc('M', 'J', 'P', 'G'), self.fps, size)
     def show_images(self):
+        self.count += 1 
+        is_detecting = False
+        if( 0 == self.count%self.frame_rate):
+            is_detecting = True
         if self.playCapture.isOpened():
             success, frame = self.playCapture.read()
             if success:
-                height, width = frame.shape[:2]
                 image = Image.fromarray(frame)
-                new_image = self.detector.detect_img(image)
-                print(type(new_image)) 
-                temp_image = ImageQt(new_image)
-                temp_pixmap = QPixmap.fromImage(temp_image)
+                new_image = self.detector.detect_img(image,is_detecting)
+                # print(type(new_image))
+                if(None==new_image):
+                # if(True):
+                    height, width = frame.shape[:2]
+                    if frame.ndim == 3:
+                        rgb = cvtColor(frame, COLOR_BGR2RGB)
+                    elif frame.ndim == 2:
+                        rgb = cvtColor(frame, COLOR_GRAY2BGR)
+                    temp_image = QImage(rgb.flatten(), width, height, QImage.Format_RGB888)
+                    temp_pixmap = QPixmap.fromImage(temp_image).scaled(self.pictureLabel.width(), self.pictureLabel.height())
+                    self.pictureLabel.setPixmap(temp_pixmap)   
+                else:
+                    temp_image = ImageQt(new_image)
+                    temp_pixmap = QPixmap.fromImage(temp_image).scaled(self.pictureLabel.width(), self.pictureLabel.height())
+                    self.pictureLabel.setPixmap(temp_pixmap)
 
-                self.pictureLabel.setPixmap(temp_pixmap)
-                # temp_image = QImage(new_image.flatten(), width, height, QImage.Format_RGB888)
-                # temp_pixmap = QPixmap.fromImage(temp_image)
-                # self.pictureLabel.setPixmap(temp_pixmap)
             else:
                 print("read failed, no frame data")
         else:
