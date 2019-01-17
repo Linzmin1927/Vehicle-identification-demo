@@ -17,7 +17,8 @@ from Yolo_V3.yolo3.model import yolo_eval, yolo_body, tiny_yolo_body
 from Yolo_V3.yolo3.utils import letterbox_image
 import os
 from keras.utils import multi_gpu_model
-
+import tensorflow as tf
+graph = -1
 class YOLO(object):
     #模型相关参数
     _defaults = {
@@ -63,6 +64,7 @@ class YOLO(object):
         '''
         加载训练好的模型
         '''
+        global graph
         model_path = os.path.expanduser(self.model_path)
         assert model_path.endswith('.h5'), 'Keras model or weights must be a .h5 file.'
 
@@ -81,7 +83,7 @@ class YOLO(object):
             assert self.yolo_model.layers[-1].output_shape[-1] == \
                 num_anchors/len(self.yolo_model.output) * (num_classes + 5), \
                 'Mismatch between model and given anchor and class sizes'
-
+        graph = tf.get_default_graph()
         print('{} model, anchors, and classes loaded.'.format(model_path))
 
         # 生成不同类别目标识别框的颜色
@@ -194,21 +196,23 @@ class YOLO(object):
         image_data /= 255.
         image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
 
-        out_boxes, out_scores, out_classes = self.sess.run(
-            [self.boxes, self.scores, self.classes],
-            feed_dict={
-                self.yolo_model.input: image_data,
-                self.input_image_shape: [image.size[1], image.size[0]],
-                K.learning_phase(): 0
-            })
+        # keras 多线程调用bug，必须这么处理
+        with graph.as_default():
+            out_boxes, out_scores, out_classes = self.sess.run(
+                [self.boxes, self.scores, self.classes],
+                feed_dict={
+                    self.yolo_model.input: image_data,
+                    self.input_image_shape: [image.size[1], image.size[0]],
+                    K.learning_phase(): 0
+                })
 
-        print('Found {} boxes for {}'.format(len(out_boxes), 'img'))
-        if (len(out_boxes)==0):
-            print("nothing!!")
-            return 
-        end = timer()
-        print("escape time:"+ str(end - start))
-        return out_boxes, out_scores, out_classes
+            print('Found {} boxes for {}'.format(len(out_boxes), 'img'))
+            end = timer()
+            print("escape time:"+ str(end - start))
+            if (len(out_boxes)==0):
+                # print("nothing!!")
+                return 
+            return out_boxes, out_scores, out_classes
 
     def close_session(self):
         self.sess.close()

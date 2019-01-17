@@ -93,7 +93,7 @@ class main_GUI(QWidget):
                             int( self.playCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
         return_value, frame =  self.playCapture.read()
         image = Image.fromarray(frame)
-        image_new = self.detector.detect_img(image,True)
+        image_new = self.detector.detect_img(image)
         print(image_new)
         if(None==image_new):
             height, width = frame.shape[:2]
@@ -131,9 +131,9 @@ class main_GUI(QWidget):
             success, frame = self.playCapture.read()
             if success:
                 image = Image.fromarray(frame)
-                new_image = self.detector.detect_img(image,is_detecting)
+                new_image = self.detector.detect_img(image)
                 # print(type(new_image))
-                if(None==new_image):
+                if new_image is None:
                 # if(True):
                     height, width = frame.shape[:2]
                     if frame.ndim == 3:
@@ -150,6 +150,7 @@ class main_GUI(QWidget):
 
             else:
                 print("read failed, no frame data")
+                self.timer.stop()
         else:
             print("open file or capturing device error, init again")
             self.reset()
